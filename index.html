@@ -426,6 +426,132 @@
     color: #886644;
     margin-top: 4px;
   }
+
+  /* ---- Mobile Responsive ---- */
+  @media (max-width: 768px) {
+    .header { padding: 12px 0 8px; }
+    .header h1 {
+      font-size: 1.6rem;
+      letter-spacing: 4px;
+    }
+    .header-deco {
+      font-size: 1rem;
+      letter-spacing: 6px;
+    }
+    .header-sub {
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+    }
+    .main-container {
+      flex-direction: column;
+      align-items: center;
+      padding: 0 8px;
+      gap: 12px;
+    }
+    .panel {
+      display: none;
+    }
+    .canvas-wrap {
+      width: 100%;
+    }
+    canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    .groups-panel {
+      width: 100%;
+    }
+    #groupsDisplay {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .group-box {
+      padding: 6px;
+      margin-bottom: 0;
+    }
+    .name-input-area {
+      padding: 8px;
+    }
+    .name-input-row input[type="text"] {
+      min-width: 100px;
+    }
+    .settings-bar {
+      padding: 6px 8px;
+    }
+    .controls {
+      gap: 8px;
+    }
+    .btn {
+      padding: 10px 20px;
+      font-size: 0.9rem;
+    }
+    .completion-box {
+      padding: 20px 16px;
+      margin: 0 12px;
+      max-width: 95vw;
+    }
+    .completion-box h2 {
+      font-size: 1.3rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .header h1 {
+      font-size: 1.3rem;
+      letter-spacing: 2px;
+    }
+    .header-deco {
+      font-size: 0.85rem;
+      letter-spacing: 4px;
+    }
+    .header-sub {
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+    }
+    .settings-bar {
+      gap: 6px;
+      padding: 4px 6px;
+    }
+    .settings-bar label { font-size: 0.78rem; }
+    .btn {
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+    }
+    .name-tag {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+    }
+    .btn-add {
+      padding: 8px 14px;
+      font-size: 0.82rem;
+    }
+    .btn-clear {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+    }
+    .group-title {
+      font-size: 0.78rem;
+    }
+    .group-member {
+      font-size: 0.72rem;
+      padding: 3px 6px;
+    }
+    .group-slot-empty {
+      font-size: 0.68rem;
+      padding: 3px 6px;
+    }
+    .completion-box {
+      padding: 16px 12px;
+    }
+    .completion-box h2 {
+      font-size: 1.1rem;
+    }
+    .completion-box p {
+      font-size: 0.85rem;
+    }
+  }
 </style>
 </head>
 <body>
