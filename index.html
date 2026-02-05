@@ -575,6 +575,8 @@
 <div class="settings-bar">
   <label>組數:</label>
   <input type="number" id="numGroups" value="8" min="2" max="20" onchange="onGroupsChange()">
+  <label>每組上限:</label>
+  <input type="number" id="maxPerGroup" value="0" min="0" max="50" onchange="onGroupsChange()" title="0 = 自動計算">
   <div class="volume-control">
     <label style="font-size:1.1rem">🔊</label>
     <input type="range" id="volumeSlider" min="0" max="100" value="50" oninput="setVolume(this.value)">
@@ -825,23 +827,35 @@ function renderNameTags() {
     container.appendChild(tag);
   });
   const hint = document.getElementById('nameCountHint');
+  const userMax = parseInt(document.getElementById('maxPerGroup').value) || 0;
   if (customNames.length === 0) {
     hint.textContent = '尚未加入名字 — 直接開始將使用預設 8 人';
   } else {
-    const perGroup = Math.ceil(customNames.length / NUM_GROUPS);
-    hint.textContent = `共 ${customNames.length} 人，${NUM_GROUPS} 組，每組 ${perGroup} 人`;
+    const perGroup = userMax > 0 ? userMax : Math.ceil(customNames.length / NUM_GROUPS);
+    hint.textContent = `共 ${customNames.length} 人，${NUM_GROUPS} 組，每組最多 ${perGroup} 人`;
   }
 }
 
 function syncNamesAndReset() {
   NUM_GROUPS = parseInt(document.getElementById('numGroups').value) || 8;
+  const userMax = parseInt(document.getElementById('maxPerGroup').value) || 0;
   if (customNames.length > 0) {
     NUM_PEOPLE = customNames.length;
     if (NUM_GROUPS > NUM_PEOPLE) NUM_GROUPS = NUM_PEOPLE;
   } else {
     NUM_PEOPLE = 8;
   }
-  MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  if (userMax > 0) {
+    MEMBERS_PER_GROUP = userMax;
+    // auto-increase groups if not enough capacity
+    const needed = Math.ceil(NUM_PEOPLE / MEMBERS_PER_GROUP);
+    if (needed > NUM_GROUPS) {
+      NUM_GROUPS = needed;
+      document.getElementById('numGroups').value = NUM_GROUPS;
+    }
+  } else {
+    MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  }
   initGroups();
   buildSlots();
   // rebuild name list and queue
@@ -923,7 +937,17 @@ function initNames() {
     for (let i = 1; i <= NUM_PEOPLE; i++) names.push(`成員 ${i}`);
   }
   if (NUM_GROUPS > NUM_PEOPLE) NUM_GROUPS = NUM_PEOPLE;
-  MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  const userMax = parseInt(document.getElementById('maxPerGroup').value) || 0;
+  if (userMax > 0) {
+    MEMBERS_PER_GROUP = userMax;
+    const needed = Math.ceil(NUM_PEOPLE / MEMBERS_PER_GROUP);
+    if (needed > NUM_GROUPS) {
+      NUM_GROUPS = needed;
+      document.getElementById('numGroups').value = NUM_GROUPS;
+    }
+  } else {
+    MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  }
 }
 
 function initGroups() {
