@@ -248,6 +248,29 @@
     color: rgba(255,200,150,0.2);
     border: 1px dashed rgba(255,200,150,0.1);
   }
+  .group-limit-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+  }
+  .group-limit-row label {
+    font-size: 0.68rem;
+    color: rgba(255,200,150,0.5);
+    white-space: nowrap;
+  }
+  .group-limit-row input[type="range"] {
+    flex: 1;
+    height: 4px;
+    accent-color: #cc8800;
+    cursor: pointer;
+  }
+  .group-limit-val {
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-width: 16px;
+    text-align: center;
+  }
   @keyframes memberPop {
     0% { transform: scale(0); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
@@ -542,6 +565,8 @@
       font-size: 0.68rem;
       padding: 3px 6px;
     }
+    .group-limit-row label { font-size: 0.6rem; }
+    .group-limit-val { font-size: 0.65rem; }
     .completion-box {
       padding: 16px 12px;
     }
@@ -575,8 +600,6 @@
 <div class="settings-bar">
   <label>組數:</label>
   <input type="number" id="numGroups" value="8" min="2" max="20" onchange="onGroupsChange()">
-  <label>每組上限:</label>
-  <input type="number" id="maxPerGroup" value="0" min="0" max="50" onchange="onGroupsChange()" title="0 = 自動計算">
   <div class="volume-control">
     <label style="font-size:1.1rem">🔊</label>
     <input type="range" id="volumeSlider" min="0" max="100" value="50" oninput="setVolume(this.value)">
@@ -753,6 +776,7 @@ let customNames = [];  // user-added names
 let NUM_PEOPLE = 0;
 let NUM_GROUPS = 8;
 let MEMBERS_PER_GROUP = 3;
+let groupLimits = [];  // per-group max limits
 let names = [];
 let groups = [];
 let launchQueue = [];
@@ -827,34 +851,27 @@ function renderNameTags() {
     container.appendChild(tag);
   });
   const hint = document.getElementById('nameCountHint');
-  const userMax = parseInt(document.getElementById('maxPerGroup').value) || 0;
   if (customNames.length === 0) {
     hint.textContent = '尚未加入名字 — 直接開始將使用預設 8 人';
   } else {
-    const perGroup = userMax > 0 ? userMax : Math.ceil(customNames.length / NUM_GROUPS);
-    hint.textContent = `共 ${customNames.length} 人，${NUM_GROUPS} 組，每組最多 ${perGroup} 人`;
+    hint.textContent = `共 ${customNames.length} 人，${NUM_GROUPS} 組（可在各組調整上限）`;
   }
 }
 
 function syncNamesAndReset() {
   NUM_GROUPS = parseInt(document.getElementById('numGroups').value) || 8;
-  const userMax = parseInt(document.getElementById('maxPerGroup').value) || 0;
   if (customNames.length > 0) {
     NUM_PEOPLE = customNames.length;
     if (NUM_GROUPS > NUM_PEOPLE) NUM_GROUPS = NUM_PEOPLE;
   } else {
     NUM_PEOPLE = 8;
   }
-  if (userMax > 0) {
-    MEMBERS_PER_GROUP = userMax;
-    // auto-increase groups if not enough capacity
-    const needed = Math.ceil(NUM_PEOPLE / MEMBERS_PER_GROUP);
-    if (needed > NUM_GROUPS) {
-      NUM_GROUPS = needed;
-      document.getElementById('numGroups').value = NUM_GROUPS;
-    }
-  } else {
-    MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  // build per-group limits, preserve existing overrides
+  const oldLimits = [...groupLimits];
+  groupLimits = [];
+  for (let i = 0; i < NUM_GROUPS; i++) {
+    groupLimits.push(oldLimits[i] != null && i < oldLimits.length ? oldLimits[i] : MEMBERS_PER_GROUP);
   }
   initGroups();
   buildSlots();
@@ -937,16 +954,12 @@ function initNames() {
     for (let i = 1; i <= NUM_PEOPLE; i++) names.push(`成員 ${i}`);
   }
   if (NUM_GROUPS > NUM_PEOPLE) NUM_GROUPS = NUM_PEOPLE;
-  const userMax = parseInt(document.getElementById('maxPerGroup').value) || 0;
-  if (userMax > 0) {
-    MEMBERS_PER_GROUP = userMax;
-    const needed = Math.ceil(NUM_PEOPLE / MEMBERS_PER_GROUP);
-    if (needed > NUM_GROUPS) {
-      NUM_GROUPS = needed;
-      document.getElementById('numGroups').value = NUM_GROUPS;
-    }
-  } else {
-    MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
+  // init per-group limits
+  const oldLimits = [...groupLimits];
+  groupLimits = [];
+  for (let i = 0; i < NUM_GROUPS; i++) {
+    groupLimits.push(oldLimits[i] != null && i < oldLimits.length ? oldLimits[i] : MEMBERS_PER_GROUP);
   }
 }
 
@@ -968,23 +981,46 @@ function buildUI() {
   renderGroups();
 }
 
+function setGroupLimit(idx, val) {
+  val = parseInt(val);
+  if (val < 1) val = 1;
+  if (val > NUM_PEOPLE) val = NUM_PEOPLE;
+  groupLimits[idx] = val;
+  const label = document.getElementById('glVal-' + idx);
+  if (label) label.textContent = val;
+  // update full state visually
+  const box = document.getElementById('gbox-' + idx);
+  if (box) {
+    if (groups[idx].length >= val) box.classList.add('full');
+    else box.classList.remove('full');
+  }
+}
+
 function renderGroups() {
   const gd = document.getElementById('groupsDisplay');
   gd.innerHTML = '';
   for (let i = 0; i < NUM_GROUPS; i++) {
+    const lim = groupLimits[i] || MEMBERS_PER_GROUP;
     const box = document.createElement('div');
-    box.className = 'group-box' + (groups[i].length >= MEMBERS_PER_GROUP ? ' full' : '');
+    box.className = 'group-box' + (groups[i].length >= lim ? ' full' : '');
     box.style.borderColor = GROUP_COLORS[i];
+    box.id = 'gbox-' + i;
 
     const title = document.createElement('div');
     title.className = 'group-title';
     title.style.color = GROUP_COLORS[i];
-    title.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${GROUP_COLORS[i]}"></span> 第 ${i+1} 組 (${groups[i].length}/${MEMBERS_PER_GROUP})`;
+    title.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${GROUP_COLORS[i]}"></span> 第 ${i+1} 組 (${groups[i].length}/<span id="glVal-${i}" class="group-limit-val" style="color:${GROUP_COLORS[i]}">${lim}</span>)`;
     box.appendChild(title);
+
+    // per-group limit slider
+    const limitRow = document.createElement('div');
+    limitRow.className = 'group-limit-row';
+    limitRow.innerHTML = `<label>上限</label><input type="range" min="1" max="${NUM_PEOPLE}" value="${lim}" oninput="setGroupLimit(${i}, this.value)">`;
+    box.appendChild(limitRow);
 
     const members = document.createElement('div');
     members.className = 'group-members';
-    for (let j = 0; j < MEMBERS_PER_GROUP; j++) {
+    for (let j = 0; j < lim; j++) {
       if (j < groups[i].length) {
         const m = document.createElement('div');
         m.className = 'group-member';
@@ -1055,7 +1091,7 @@ function runAuto() {
 function findAvailableSlot() {
   const available = [];
   for (let i = 0; i < NUM_GROUPS; i++) {
-    if (groups[i].length < MEMBERS_PER_GROUP) available.push(i);
+    if (groups[i].length < (groupLimits[i] || MEMBERS_PER_GROUP)) available.push(i);
   }
   if (available.length === 0) return -1;
   return available[Math.floor(Math.random() * available.length)];
@@ -1141,7 +1177,7 @@ function update() {
       let naturalSlot = Math.floor(ball.x / (W/NUM_GROUPS));
       naturalSlot = Math.max(0, Math.min(NUM_GROUPS-1, naturalSlot));
       let targetSlot = naturalSlot;
-      if (groups[targetSlot].length >= MEMBERS_PER_GROUP) targetSlot = findAvailableSlot();
+      if (groups[targetSlot].length >= (groupLimits[targetSlot] || MEMBERS_PER_GROUP)) targetSlot = findAvailableSlot();
       if (targetSlot === -1) { ball.landed = true; continue; }
 
       ball.landed = true;
@@ -1309,7 +1345,7 @@ function draw() {
     ctx.fillText(slots[i].label, sx+sw/2, slotTop+15);
     ctx.fillStyle = GROUP_COLORS[i] + '88';
     ctx.font = '10px "Noto Sans TC"';
-    ctx.fillText(`${groups[i].length}/${MEMBERS_PER_GROUP}`, sx+sw/2, slotTop+28);
+    ctx.fillText(`${groups[i].length}/${groupLimits[i] || MEMBERS_PER_GROUP}`, sx+sw/2, slotTop+28);
   }
 
   // top line of slot area
