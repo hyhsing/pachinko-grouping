@@ -1173,6 +1173,44 @@ function update() {
     }
 
     const slotTop = H - SLOT_HEIGHT;
+
+    // barrier: bounce ball off full slots
+    if (ball.y + BALL_RADIUS >= slotTop - 2 && ball.y + BALL_RADIUS < slotTop + 8) {
+      let overSlot = Math.floor(ball.x / (W / NUM_GROUPS));
+      overSlot = Math.max(0, Math.min(NUM_GROUPS - 1, overSlot));
+      const lim = groupLimits[overSlot] || MEMBERS_PER_GROUP;
+      if (groups[overSlot].length >= lim) {
+        // bounce upward off the barrier
+        ball.vy = -Math.abs(ball.vy) * 0.65 - 1.5;
+        ball.y = slotTop - BALL_RADIUS - 3;
+        // push toward nearest open slot
+        let nearest = -1, nearDist = Infinity;
+        for (let s = 0; s < NUM_GROUPS; s++) {
+          if (groups[s].length < (groupLimits[s] || MEMBERS_PER_GROUP)) {
+            const sc = slots[s].x + slots[s].w / 2;
+            const d = Math.abs(ball.x - sc);
+            if (d < nearDist) { nearDist = d; nearest = s; }
+          }
+        }
+        if (nearest >= 0) {
+          const sc = slots[nearest].x + slots[nearest].w / 2;
+          ball.vx += (sc > ball.x ? 1 : -1) * (2 + Math.random() * 2);
+        } else {
+          ball.vx += (Math.random() - 0.5) * 4;
+        }
+        playWallBounce();
+        // barrier spark particles
+        for (let p = 0; p < 6; p++) {
+          particles.push({
+            x: ball.x, y: slotTop,
+            vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 3,
+            life: 0.8, color: GROUP_COLORS[overSlot], size: 2 + Math.random() * 2
+          });
+        }
+        continue; // skip landing check this frame
+      }
+    }
+
     if (ball.y + BALL_RADIUS >= slotTop) {
       let naturalSlot = Math.floor(ball.x / (W/NUM_GROUPS));
       naturalSlot = Math.max(0, Math.min(NUM_GROUPS-1, naturalSlot));
@@ -1346,6 +1384,34 @@ function draw() {
     ctx.fillStyle = GROUP_COLORS[i] + '88';
     ctx.font = '10px "Noto Sans TC"';
     ctx.fillText(`${groups[i].length}/${groupLimits[i] || MEMBERS_PER_GROUP}`, sx+sw/2, slotTop+28);
+  }
+
+  // barriers on full slots
+  for (let i = 0; i < NUM_GROUPS; i++) {
+    const lim = groupLimits[i] || MEMBERS_PER_GROUP;
+    if (groups[i].length >= lim) {
+      const sx = slots[i].x, sw = slots[i].w;
+      // dark overlay
+      ctx.fillStyle = 'rgba(10,0,0,0.5)';
+      ctx.fillRect(sx + 1, slotTop, sw - 2, SLOT_HEIGHT);
+      // glowing barrier line
+      const pulse = 0.6 + 0.4 * Math.sin(frameCount * 0.08);
+      ctx.strokeStyle = `rgba(255,80,80,${pulse * 0.8})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(sx + 4, slotTop); ctx.lineTo(sx + sw - 4, slotTop); ctx.stroke();
+      // glow effect
+      ctx.shadowColor = '#ff4444';
+      ctx.shadowBlur = 10;
+      ctx.strokeStyle = `rgba(255,60,60,${pulse * 0.4})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(sx + 4, slotTop); ctx.lineTo(sx + sw - 4, slotTop); ctx.stroke();
+      ctx.shadowBlur = 0;
+      // X mark
+      ctx.fillStyle = `rgba(255,100,100,${pulse * 0.5})`;
+      ctx.font = 'bold 16px "Noto Sans TC"';
+      ctx.textAlign = 'center';
+      ctx.fillText('✕', sx + sw / 2, slotTop + 44);
+    }
   }
 
   // top line of slot area
