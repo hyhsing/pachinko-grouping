@@ -864,7 +864,7 @@ function syncNamesAndReset() {
     NUM_PEOPLE = customNames.length;
     if (NUM_GROUPS > NUM_PEOPLE) NUM_GROUPS = NUM_PEOPLE;
   } else {
-    NUM_PEOPLE = 8;
+    NUM_PEOPLE = 10;
   }
   MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
   // build per-group limits, preserve existing overrides
@@ -944,14 +944,18 @@ function buildSlots() {
   }
 }
 
+const DEFAULT_NAMES = [
+  '愛因斯坦', '牛頓', '達文西', '莎士比亞', '孔子',
+  '貝多芬', '居里夫人', '甘地', '拿破崙', '乾隆皇帝'
+];
+
 function initNames() {
   if (customNames.length > 0) {
     names = [...customNames];
     NUM_PEOPLE = names.length;
   } else {
-    NUM_PEOPLE = 8;
-    names = [];
-    for (let i = 1; i <= NUM_PEOPLE; i++) names.push(`成員 ${i}`);
+    NUM_PEOPLE = DEFAULT_NAMES.length;
+    names = [...DEFAULT_NAMES];
   }
   if (NUM_GROUPS > NUM_PEOPLE) NUM_GROUPS = NUM_PEOPLE;
   MEMBERS_PER_GROUP = Math.ceil(NUM_PEOPLE / NUM_GROUPS);
