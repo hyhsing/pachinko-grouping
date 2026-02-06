@@ -852,9 +852,14 @@ function renderNameTags() {
   });
   const hint = document.getElementById('nameCountHint');
   if (customNames.length === 0) {
-    hint.textContent = '尚未加入名字 — 直接開始將使用預設 8 人';
+    hint.textContent = '尚未加入名字 — 直接開始將使用預設 10 位歷史名人';
   } else {
-    hint.textContent = `共 ${customNames.length} 人，${NUM_GROUPS} 組（可在各組調整上限）`;
+    const capacity = getTotalCapacity();
+    if (capacity < customNames.length) {
+      hint.innerHTML = `<span style="color:#ff4444">⚠️ 容量不足！總容量 ${capacity} < ${customNames.length} 人</span>`;
+    } else {
+      hint.textContent = `共 ${customNames.length} 人，${NUM_GROUPS} 組，總容量 ${capacity} 位`;
+    }
   }
 }
 
@@ -998,6 +1003,19 @@ function setGroupLimit(idx, val) {
     if (groups[idx].length >= val) box.classList.add('full');
     else box.classList.remove('full');
   }
+  // update capacity hint
+  updateCapacityHint();
+}
+
+function updateCapacityHint() {
+  const hint = document.getElementById('nameCountHint');
+  const capacity = getTotalCapacity();
+  const people = NUM_PEOPLE;
+  if (capacity < people) {
+    hint.innerHTML = `<span style="color:#ff4444">⚠️ 容量不足！總容量 ${capacity} < ${people} 人</span>`;
+  } else {
+    hint.textContent = `共 ${people} 人，${NUM_GROUPS} 組，總容量 ${capacity} 位`;
+  }
 }
 
 function renderGroups() {
@@ -1044,9 +1062,30 @@ function renderGroups() {
   }
 }
 
+// ============ CAPACITY CHECK ============
+function getTotalCapacity() {
+  let total = 0;
+  for (let i = 0; i < NUM_GROUPS; i++) {
+    total += groupLimits[i] || MEMBERS_PER_GROUP;
+  }
+  return total;
+}
+
+function checkCapacityWarning() {
+  const capacity = getTotalCapacity();
+  const remaining = launchQueue.length;
+  if (remaining > capacity) {
+    alert(`⚠️ 容量不足！\n\n目前總容量：${capacity} 位\n待分配人數：${remaining} 位\n\n請增加各組上限，或減少人數。`);
+    return false;
+  }
+  return true;
+}
+
 // ============ BALL LAUNCH ============
 function launchNext() {
   if (launchQueue.length === 0) return;
+  // check capacity on first launch
+  if (!gameStarted && !checkCapacityWarning()) return;
   const idx = launchQueue.shift();
   currentBallIdx = idx;
   document.getElementById('name-' + idx).classList.add('active');
